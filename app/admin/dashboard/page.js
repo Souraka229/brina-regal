@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { supabase } from '../../../lib/supabaseClient'
-import { uploadImage, deleteImage } from '../../../lib/uploadImage'
+import { uploadImage } from '../../../lib/uploadImage'
 
 export default function Dashboard() {
   const [isAdmin, setIsAdmin] = useState(false)
@@ -13,17 +13,17 @@ export default function Dashboard() {
   const [avis, setAvis] = useState([])
   const [loading, setLoading] = useState(true)
   const [editingProduct, setEditingProduct] = useState(null)
+  const [uploadingImage, setUploadingImage] = useState(false)
   const router = useRouter()
 
-  // États pour les formulaires
+  // États pour le formulaire
   const [nouveauProduit, setNouveauProduit] = useState({
     nom: '',
     description: '',
     prix: '',
-    categorie: '',
+    categorie: 'Grillades',
     image_url: ''
   })
-  const [uploadingImage, setUploadingImage] = useState(false)
 
   useEffect(() => {
     checkAdmin()
@@ -31,32 +31,15 @@ export default function Dashboard() {
 
   const checkAdmin = async () => {
     try {
-      // Vérifier dans localStorage ET dans la base de données
-      const adminLocal = localStorage.getItem('admin')
-      
-      if (!adminLocal) {
+      const admin = localStorage.getItem('admin')
+      if (!admin) {
         router.push('/admin/login')
         return
       }
-
-      // Vérifier les identifiants dans la base de données
-      const { data: adminData, error } = await supabase
-        .from('admin')
-        .select('*')
-        .eq('email', 'brian@patron')
-        .single()
-
-      if (error || !adminData) {
-        localStorage.removeItem('admin')
-        router.push('/admin/login')
-        return
-      }
-
       setIsAdmin(true)
       await fetchData()
     } catch (error) {
       console.error('Erreur vérification admin:', error)
-      router.push('/admin/login')
     }
   }
 
@@ -81,31 +64,65 @@ export default function Dashboard() {
     }
   }
 
+  // 🔄 GESTION DES COMMANDES
+  const modifierStatutCommande = async (commandeId, nouveauStatut) => {
+    try {
+      console.log('Modification statut commande:', commandeId, nouveauStatut)
+      
+      const { error } = await supabase
+        .from('commandes')
+        .update({ statut: nouveauStatut })
+        .eq('id', commandeId)
+
+      if (error) {
+        console.error('Erreur Supabase:', error)
+        throw error
+      }
+
+      alert(`✅ Commande ${nouveauStatut} avec succès!`)
+      
+      // Recharger les données
+      await fetchData()
+      
+    } catch (error) {
+      console.error('Erreur mise à jour commande:', error)
+      alert('❌ Erreur lors de la mise à jour: ' + error.message)
+    }
+  }
+
+  // 🖼️ UPLOAD D'IMAGE
   const handleImageUpload = async (e, isEdit = false) => {
     const file = e.target.files[0]
     if (!file) return
 
     setUploadingImage(true)
-    const result = await uploadImage(file, 'produits')
-    setUploadingImage(false)
-
-    if (result.success) {
-      if (isEdit && editingProduct) {
-        setEditingProduct({
-          ...editingProduct,
-          image_url: result.publicUrl
-        })
+    try {
+      const result = await uploadImage(file, 'produits')
+      
+      if (result.success) {
+        if (isEdit && editingProduct) {
+          setEditingProduct({
+            ...editingProduct,
+            image_url: result.publicUrl
+          })
+        } else {
+          setNouveauProduit({
+            ...nouveauProduit,
+            image_url: result.publicUrl
+          })
+        }
+        alert('✅ Image uploadée avec succès!')
       } else {
-        setNouveauProduit({
-          ...nouveauProduit,
-          image_url: result.publicUrl
-        })
+        alert('❌ Erreur upload: ' + result.error)
       }
-    } else {
-      alert('Erreur lors de l\'upload de l\'image')
+    } catch (error) {
+      alert('❌ Erreur: ' + error.message)
+    } finally {
+      setUploadingImage(false)
     }
   }
 
+  // ➕ AJOUTER PRODUIT
   const ajouterProduit = async (e) => {
     e.preventDefault()
     try {
@@ -120,15 +137,16 @@ export default function Dashboard() {
 
       if (error) throw error
 
-      alert('Produit ajouté avec succès!')
-      setNouveauProduit({ nom: '', description: '', prix: '', categorie: '', image_url: '' })
-      fetchData()
+      alert('✅ Produit ajouté avec succès!')
+      setNouveauProduit({ nom: '', description: '', prix: '', categorie: 'Grillades', image_url: '' })
+      await fetchData()
     } catch (error) {
       console.error('Erreur ajout produit:', error)
-      alert('Erreur lors de l ajout du produit: ' + error.message)
+      alert('❌ Erreur: ' + error.message)
     }
   }
 
+  // ✏️ MODIFIER PRODUIT
   const modifierProduit = async (e) => {
     e.preventDefault()
     try {
@@ -142,68 +160,16 @@ export default function Dashboard() {
 
       if (error) throw error
 
-      alert('Produit modifié avec succès!')
+      alert('✅ Produit modifié avec succès!')
       setEditingProduct(null)
-      fetchData()
+      await fetchData()
     } catch (error) {
       console.error('Erreur modification produit:', error)
-      alert('Erreur lors de la modification')
+      alert('❌ Erreur: ' + error.message)
     }
   }
 
-  const modifierStatutCommande = async (commandeId, nouveauStatut) => {
-    try {
-      const { error } = await supabase
-        .from('commandes')
-        .update({ statut: nouveauStatut })
-        .eq('id', commandeId)
-
-      if (error) throw error
-
-      alert('Statut de commande mis à jour!')
-      fetchData()
-    } catch (error) {
-      console.error('Erreur mise à jour commande:', error)
-      alert('Erreur lors de la mise à jour')
-    }
-  }
-
-  const validerAvis = async (avisId) => {
-    try {
-      const { error } = await supabase
-        .from('avis')
-        .update({ valide: true })
-        .eq('id', avisId)
-
-      if (error) throw error
-
-      alert('Avis validé!')
-      fetchData()
-    } catch (error) {
-      console.error('Erreur validation avis:', error)
-      alert('Erreur lors de la validation')
-    }
-  }
-
-  const supprimerAvis = async (avisId) => {
-    if (!confirm('Êtes-vous sûr de vouloir supprimer cet avis ?')) return
-
-    try {
-      const { error } = await supabase
-        .from('avis')
-        .delete()
-        .eq('id', avisId)
-
-      if (error) throw error
-
-      alert('Avis supprimé!')
-      fetchData()
-    } catch (error) {
-      console.error('Erreur suppression avis:', error)
-      alert('Erreur lors de la suppression')
-    }
-  }
-
+  // 🗑️ SUPPRIMER PRODUIT
   const supprimerProduit = async (produitId) => {
     if (!confirm('Êtes-vous sûr de vouloir supprimer ce produit ?')) return
 
@@ -215,25 +181,51 @@ export default function Dashboard() {
 
       if (error) throw error
 
-      alert('Produit supprimé!')
-      fetchData()
+      alert('✅ Produit supprimé!')
+      await fetchData()
     } catch (error) {
       console.error('Erreur suppression produit:', error)
-      alert('Erreur lors de la suppression')
+      alert('❌ Erreur: ' + error.message)
     }
   }
 
-  // Calcul des statistiques
-  const commandesAujourdhui = commandes.filter(c => 
-    new Date(c.created_at).toDateString() === new Date().toDateString()
-  ).length
+  // ⭐ VALIDER AVIS
+  const validerAvis = async (avisId) => {
+    try {
+      const { error } = await supabase
+        .from('avis')
+        .update({ valide: true })
+        .eq('id', avisId)
 
-  const revenusTotaux = commandes
-    .filter(c => c.statut === 'confirmé')
-    .reduce((total, cmd) => total + parseFloat(cmd.total || 0), 0)
+      if (error) throw error
 
-  const avisEnAttente = avis.filter(a => !a.valide).length
-  const produitsActifs = produits.filter(p => p.disponible).length
+      alert('✅ Avis validé!')
+      await fetchData()
+    } catch (error) {
+      console.error('Erreur validation avis:', error)
+      alert('❌ Erreur: ' + error.message)
+    }
+  }
+
+  // 🗑️ SUPPRIMER AVIS
+  const supprimerAvis = async (avisId) => {
+    if (!confirm('Êtes-vous sûr de vouloir supprimer cet avis ?')) return
+
+    try {
+      const { error } = await supabase
+        .from('avis')
+        .delete()
+        .eq('id', avisId)
+
+      if (error) throw error
+
+      alert('✅ Avis supprimé!')
+      await fetchData()
+    } catch (error) {
+      console.error('Erreur suppression avis:', error)
+      alert('❌ Erreur: ' + error.message)
+    }
+  }
 
   if (!isAdmin) {
     return (
@@ -282,22 +274,30 @@ export default function Dashboard() {
         <div className="grid md:grid-cols-4 gap-6 mb-8">
           <div className="bg-black border border-gold/20 rounded-2xl p-6">
             <h3 className="text-gold font-semibold mb-2">Commandes aujourd'hui</h3>
-            <p className="text-3xl font-bold text-cream">{commandesAujourdhui}</p>
+            <p className="text-3xl font-bold text-cream">
+              {commandes.filter(c => new Date(c.created_at).toDateString() === new Date().toDateString()).length}
+            </p>
           </div>
           
           <div className="bg-black border border-gold/20 rounded-2xl p-6">
             <h3 className="text-gold font-semibold mb-2">Revenus totaux</h3>
-            <p className="text-3xl font-bold text-cream">{revenusTotaux.toLocaleString()} XOF</p>
+            <p className="text-3xl font-bold text-cream">
+              {commandes.filter(c => c.statut === 'confirmé').reduce((total, cmd) => total + parseFloat(cmd.total || 0), 0).toLocaleString()} XOF
+            </p>
           </div>
           
           <div className="bg-black border border-gold/20 rounded-2xl p-6">
             <h3 className="text-gold font-semibold mb-2">Avis en attente</h3>
-            <p className="text-3xl font-bold text-cream">{avisEnAttente}</p>
+            <p className="text-3xl font-bold text-cream">
+              {avis.filter(a => !a.valide).length}
+            </p>
           </div>
 
           <div className="bg-black border border-gold/20 rounded-2xl p-6">
             <h3 className="text-gold font-semibold mb-2">Produits actifs</h3>
-            <p className="text-3xl font-bold text-cream">{produitsActifs}</p>
+            <p className="text-3xl font-bold text-cream">
+              {produits.filter(p => p.disponible).length}
+            </p>
           </div>
         </div>
 
@@ -320,7 +320,8 @@ export default function Dashboard() {
 
         {/* Contenu des onglets */}
         <div className="bg-black border border-gold/20 rounded-2xl p-6">
-          {/* Commandes */}
+          
+          {/* COMMANDES */}
           {activeTab === 'commandes' && (
             <div>
               <h2 className="text-2xl font-semibold text-gold mb-6">
@@ -330,7 +331,6 @@ export default function Dashboard() {
               {commandes.length === 0 ? (
                 <div className="text-center py-12">
                   <p className="text-cream/60 text-xl">Aucune commande pour le moment</p>
-                  <p className="text-cream/40 mt-2">Les commandes apparaîtront ici</p>
                 </div>
               ) : (
                 <div className="space-y-6">
@@ -376,14 +376,13 @@ export default function Dashboard() {
                       <div className="mb-4">
                         <h4 className="text-cream font-semibold mb-3">🛒 Produits commandés:</h4>
                         <div className="space-y-2 bg-dark/50 rounded-lg p-4">
-                          {commande.produits && typeof commande.produits === 'object' && 
-                           Object.values(commande.produits).map((item, index) => (
+                          {Array.isArray(commande.produits) && commande.produits.map((item, index) => (
                             <div key={index} className="flex justify-between items-center text-cream/80">
                               <div>
                                 <span className="font-medium">{item.nom}</span>
                                 <span className="text-sm ml-2">x{item.quantity}</span>
                               </div>
-                              <span>{item.prix * item.quantity} XOF</span>
+                              <span>{(item.prix * item.quantity).toLocaleString()} XOF</span>
                             </div>
                           ))}
                         </div>
@@ -399,14 +398,6 @@ export default function Dashboard() {
                               alt="Preuve de paiement" 
                               className="max-w-xs rounded-lg border border-gold/20"
                             />
-                            <a 
-                              href={commande.image_preuve} 
-                              target="_blank" 
-                              rel="noopener noreferrer"
-                              className="text-gold hover:text-orange text-sm mt-2 inline-block"
-                            >
-                              🔍 Voir en grand
-                            </a>
                           </div>
                         </div>
                       )}
@@ -439,18 +430,18 @@ export default function Dashboard() {
             </div>
           )}
 
-          {/* Produits */}
+          {/* PRODUITS */}
           {activeTab === 'produits' && (
             <div>
               <div className="flex justify-between items-center mb-6">
                 <h2 className="text-2xl font-semibold text-gold">Gestion des Produits</h2>
-                <span className="text-cream/80">{produitsActifs} produits actifs</span>
+                <span className="text-cream/80">{produits.filter(p => p.disponible).length} produits actifs</span>
               </div>
 
-              {/* Formulaire ajout/modification produit */}
+              {/* Formulaire ajout/modification */}
               <div className="bg-dark p-6 rounded-lg mb-8 border border-gold/20">
                 <h3 className="text-xl font-semibold text-gold mb-4">
-                  {editingProduct ? 'Modifier le produit' : 'Ajouter un nouveau produit'}
+                  {editingProduct ? '✏️ Modifier le produit' : '➕ Ajouter un nouveau produit'}
                 </h3>
                 
                 <form onSubmit={editingProduct ? modifierProduit : ajouterProduit}>
@@ -477,9 +468,7 @@ export default function Dashboard() {
                       className="bg-black border border-gold/20 rounded-lg px-4 py-3 text-cream focus:outline-none focus:border-gold"
                       required
                     />
-                    <input
-                      type="text"
-                      placeholder="Catégorie *"
+                    <select
                       value={editingProduct ? editingProduct.categorie : nouveauProduit.categorie}
                       onChange={(e) => editingProduct 
                         ? setEditingProduct({...editingProduct, categorie: e.target.value})
@@ -487,7 +476,18 @@ export default function Dashboard() {
                       }
                       className="bg-black border border-gold/20 rounded-lg px-4 py-3 text-cream focus:outline-none focus:border-gold"
                       required
-                    />
+                    >
+                      <option value="Grillades">Grillades</option>
+                      <option value="Plats Principaux">Plats Principaux</option>
+                      <option value="Plats Traditionnels">Plats Traditionnels</option>
+                      <option value="Accompagnements">Accompagnements</option>
+                      <option value="Plats Spéciaux">Plats Spéciaux</option>
+                      <option value="Plats en Sauce">Plats en Sauce</option>
+                      <option value="Plats Végétariens">Plats Végétariens</option>
+                      <option value="Salades">Salades</option>
+                      <option value="Boissons">Boissons</option>
+                      <option value="Desserts">Desserts</option>
+                    </select>
                     
                     {/* Upload image */}
                     <div className="flex items-center space-x-4">
@@ -502,7 +502,7 @@ export default function Dashboard() {
                         htmlFor="product-image"
                         className="bg-gold text-dark px-4 py-3 rounded-lg font-semibold hover:bg-orange transition-colors cursor-pointer flex-1 text-center"
                       >
-                        {uploadingImage ? 'Upload...' : '📸 Choisir image'}
+                        {uploadingImage ? '📤 Upload...' : '📸 Choisir image'}
                       </label>
                     </div>
                   </div>
@@ -536,7 +536,7 @@ export default function Dashboard() {
                       type="submit"
                       className="bg-gradient-to-r from-gold to-orange text-dark px-6 py-3 rounded-lg font-semibold hover:shadow-lg transition-all"
                     >
-                      {editingProduct ? 'Modifier le produit' : 'Ajouter le produit'}
+                      {editingProduct ? '💾 Sauvegarder' : '➕ Ajouter le produit'}
                     </button>
                     
                     {editingProduct && (
@@ -545,7 +545,7 @@ export default function Dashboard() {
                         onClick={() => setEditingProduct(null)}
                         className="bg-gray-500 text-white px-6 py-3 rounded-lg font-semibold hover:bg-gray-600 transition-colors"
                       >
-                        Annuler
+                        ❌ Annuler
                       </button>
                     )}
                   </div>
@@ -593,7 +593,7 @@ export default function Dashboard() {
             </div>
           )}
 
-          {/* Avis */}
+          {/* AVIS */}
           {activeTab === 'avis' && (
             <div>
               <h2 className="text-2xl font-semibold text-gold mb-6">
@@ -603,7 +603,6 @@ export default function Dashboard() {
               {avis.length === 0 ? (
                 <div className="text-center py-12">
                   <p className="text-cream/60 text-xl">Aucun avis pour le moment</p>
-                  <p className="text-cream/40 mt-2">Les avis des clients apparaîtront ici</p>
                 </div>
               ) : (
                 <div className="space-y-6">
