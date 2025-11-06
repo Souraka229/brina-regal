@@ -23,6 +23,7 @@ export default function Footer() {
             <h4 className="text-lg font-semibold text-gold mb-4">Horaires</h4>
             <p className="text-cream/80">Mardi au Dimanche</p>
             <p className="text-cream/80">13h00 - 00h00</p>
+            <p className="text-cream/60 text-sm mt-2">Lundi : Fermé</p>
           </div>
         </div>
         
@@ -31,5 +32,5 @@ export default function Footer() {
         </div>
       </div>
     </footer>
-  );
+  )
 }
