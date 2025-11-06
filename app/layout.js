@@ -1,7 +1,7 @@
 import './globals.css'
-import Header from '@/components/Header'
-import Footer from '@/components/Footer'
-import { CartProvider } from '@/context/CartContext'
+import Header from '../components/Header'
+import Footer from '../components/Footer'
+import { CartProvider } from '../context/CartContext'
 
 export const metadata = {
   title: "Brina'Régal - Le goût royal d'Abomey-Calavi",
