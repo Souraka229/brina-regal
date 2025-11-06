@@ -89,7 +89,7 @@ export default function Dashboard() {
       const { error } = await supabase
         .from('commandes')
         .update({ statut: nouveauStatut })
-        .eq('id', commandeId)
+        .eq('id', comman deId)
 
       if (error) throw error
 
