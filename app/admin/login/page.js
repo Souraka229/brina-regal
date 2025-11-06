@@ -1,43 +1,30 @@
-'use client';
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { motion } from 'framer-motion';
-import { supabase } from '@/lib/supabaseClient';
+'use client'
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { motion } from 'framer-motion'
 
 export default function AdminLogin() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const router = useRouter();
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const router = useRouter()
 
   const handleLogin = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
+    e.preventDefault()
+    setLoading(true)
+    setError('')
 
-    try {
-      const { data, error } = await supabase
-        .from('admin')
-        .select('*')
-        .eq('email', email)
-        .eq('mot_de_passe', password)
-        .single();
-
-      if (error || !data) {
-        setError('Identifiants incorrects');
-        return;
-      }
-
-      // Stocker la session (simplifié)
-      localStorage.setItem('admin', JSON.stringify(data));
-      router.push('/admin/dashboard');
-    } catch (err) {
-      setError('Erreur de connexion');
-    } finally {
-      setLoading(false);
+    // Validation simple
+    if (email === 'brian@patron' && password === '@5432100') {
+      // Stocker la session
+      localStorage.setItem('admin', 'true')
+      router.push('/admin/dashboard')
+    } else {
+      setError('Identifiants incorrects')
     }
-  };
+    setLoading(false)
+  }
 
   return (
     <div className="min-h-screen bg-dark flex items-center justify-center py-20">
@@ -91,5 +78,5 @@ export default function AdminLogin() {
         </form>
       </motion.div>
     </div>
-  );
+  )
 }
