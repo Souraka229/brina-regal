@@ -1,17 +1,19 @@
-'use client';
-import { useState } from 'react';
-import Link from 'next/link';
-import { motion, AnimatePresence } from 'framer-motion';
+'use client'
+import { useState } from 'react'
+import Link from 'next/link'
+import { motion, AnimatePresence } from 'framer-motion'
 
 export default function Header() {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false)
 
   return (
     <header className="bg-dark/90 backdrop-blur-md fixed w-full z-50 border-b border-gold/20">
       <nav className="container mx-auto px-4 py-4">
         <div className="flex justify-between items-center">
           <Link href="/" className="flex items-center space-x-2">
-            <div className="w-10 h-10 bg-gradient-to-r from-gold to-orange rounded-full"></div>
+            <div className="w-10 h-10 bg-gradient-to-r from-gold to-orange rounded-full flex items-center justify-center">
+              <span className="text-dark font-bold text-sm">BR</span>
+            </div>
             <span className="text-2xl font-poppins font-bold gradient-text">
               Brina'Régal
             </span>
@@ -19,20 +21,23 @@ export default function Header() {
 
           {/* Menu desktop */}
           <div className="hidden md:flex items-center space-x-8">
-            <Link href="/" className="text-cream hover:text-gold transition-colors">
+            <Link href="/" className="text-cream hover:text-gold transition-colors duration-300">
               Accueil
             </Link>
-            <Link href="/menu" className="text-cream hover:text-gold transition-colors">
+            <Link href="/menu" className="text-cream hover:text-gold transition-colors duration-300">
               Menu
             </Link>
-            <Link href="/panier" className="bg-gradient-to-r from-gold to-orange text-dark px-6 py-2 rounded-full font-semibold hover:shadow-lg transition-all">
+            <Link 
+              href="/menu" 
+              className="bg-gradient-to-r from-gold to-orange text-dark px-6 py-2 rounded-full font-semibold hover:shadow-lg transition-all duration-300 hover:scale-105"
+            >
               Commander
             </Link>
           </div>
 
           {/* Menu mobile */}
           <button 
-            className="md:hidden text-cream"
+            className="md:hidden text-cream text-2xl"
             onClick={() => setIsMenuOpen(!isMenuOpen)}
           >
             ☰
@@ -46,11 +51,27 @@ export default function Header() {
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
-              className="md:hidden mt-4 space-y-4"
+              className="md:hidden mt-4 space-y-4 pb-4"
             >
-              <Link href="/" className="block text-cream hover:text-gold">Accueil</Link>
-              <Link href="/menu" className="block text-cream hover:text-gold">Menu</Link>
-              <Link href="/panier" className="block bg-gradient-to-r from-gold to-orange text-dark px-4 py-2 rounded-full text-center">
+              <Link 
+                href="/" 
+                className="block text-cream hover:text-gold py-2 transition-colors"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                Accueil
+              </Link>
+              <Link 
+                href="/menu" 
+                className="block text-cream hover:text-gold py-2 transition-colors"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                Menu
+              </Link>
+              <Link 
+                href="/menu" 
+                className="block bg-gradient-to-r from-gold to-orange text-dark px-4 py-3 rounded-full text-center font-semibold mt-4"
+                onClick={() => setIsMenuOpen(false)}
+              >
                 Commander
               </Link>
             </motion.div>
@@ -58,5 +79,5 @@ export default function Header() {
         </AnimatePresence>
       </nav>
     </header>
-  );
+  )
 }
