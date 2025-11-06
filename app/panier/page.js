@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useCart } from '../../context/CartContext'
 import { motion } from 'framer-motion'
 import { supabase } from '../../lib/supabaseClient'
@@ -14,7 +14,16 @@ export default function Panier() {
   const [uploading, setUploading] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [uploadError, setUploadError] = useState('')
+  const [client, setClient] = useState(null)
   const router = useRouter()
+
+  // Charger les informations du client depuis le localStorage
+  useEffect(() => {
+    const clientData = localStorage.getItem('client')
+    if (clientData) {
+      setClient(JSON.parse(clientData))
+    }
+  }, [])
 
   // --------------------- Fonction d'upload ---------------------
   const handleImageUpload = async (e) => {
@@ -24,13 +33,14 @@ export default function Panier() {
     setUploadError('')
     setUploading(true)
 
-    // Vérifications
+    // Vérifier la taille du fichier (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
-      setUploadError('❌ Image trop volumineuse (max 5MB)')
+      setUploadError('❌ Image trop volumineuse (maximum 5MB)')
       setUploading(false)
       return
     }
 
+    // Vérifier le type de fichier
     const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
     if (!validTypes.includes(file.type)) {
       setUploadError('❌ Format non supporté (JPEG, PNG, WebP seulement)')
@@ -39,6 +49,7 @@ export default function Panier() {
     }
 
     try {
+      // Appeler la fonction uploadImage avec le dossier 'paiements'
       const result = await uploadImage(file, 'paiements')
 
       if (result.success && result.publicUrl) {
@@ -49,7 +60,7 @@ export default function Panier() {
         setUploadError(result.error || '❌ Erreur lors de l\'upload')
       }
     } catch (error) {
-      console.error('Erreur upload:', error)
+      console.error('Erreur lors de l\'upload:', error)
       setUploadError('❌ Erreur inattendue: ' + (error.message || error))
     } finally {
       setUploading(false)
@@ -63,7 +74,7 @@ export default function Panier() {
     setUploadError('')
 
     try {
-      // Validation
+      // Validation des champs
       if (lieu === 'hors_zone' && !imagePreuve) {
         setUploadError('Veuillez téléverser une preuve de paiement')
         setIsSubmitting(false)
@@ -78,7 +89,8 @@ export default function Panier() {
 
       // Préparer les données de commande
       const commandeData = {
-        id_client: `client_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        id_client: client ? `client_${client.id}` : `guest_${Date.now()}`,
+        client_id: client ? client.id : null,
         produits: items,
         total: getTotalPrice(),
         telephone: telephone.trim(),
@@ -88,25 +100,25 @@ export default function Panier() {
         created_at: new Date().toISOString()
       }
 
-      console.log('Envoi commande:', commandeData)
+      console.log('Envoi de la commande:', commandeData)
 
-      // Insérer dans Supabase
+      // Insérer la commande dans Supabase
       const { data, error } = await supabase
         .from('commandes')
         .insert([commandeData])
         .select()
 
       if (error) {
-        console.error('Supabase error:', error)
+        console.error('Erreur Supabase:', error)
         throw new Error(`Erreur base de données: ${error.message}`)
       }
 
-      console.log('Commande créée:', data)
+      console.log('Commande créée avec succès:', data)
 
-      // Notification succès
-      alert('✅ Commande passée avec succès! Nous vous contacterons pour confirmation.')
+      // Notification de succès
+      alert('✅ Commande passée avec succès ! Nous vous contacterons pour confirmation.')
 
-      // Vider le panier et rediriger
+      // Vider le panier et rediriger vers la page d’accueil
       clearCart()
       router.push('/')
 
@@ -157,7 +169,7 @@ export default function Panier() {
         </motion.h1>
 
         <div className="grid lg:grid-cols-2 gap-8 max-w-6xl mx-auto">
-          {/* Récapitulatif commande */}
+          {/* ----------------- Récapitulatif commande ----------------- */}
           <div className="bg-black border border-gold/20 rounded-2xl p-6">
             <h2 className="text-2xl font-semibold text-gold mb-6">Votre Commande</h2>
             <div className="space-y-4">
@@ -206,7 +218,7 @@ export default function Panier() {
             </div>
           </div>
 
-          {/* Formulaire de commande */}
+          {/* ----------------- Formulaire de commande ----------------- */}
           <form onSubmit={handleSubmit} className="bg-black border border-gold/20 rounded-2xl p-6">
             <h2 className="text-2xl font-semibold text-gold mb-6">Informations de Livraison</h2>
             
@@ -249,7 +261,7 @@ export default function Panier() {
                     setUploadError('')
                   }}
                   className="w-full bg-dark border border-gold/20 rounded-lg px-4 py-3 text-cream focus:outline-none focus:border-gold"
-                  placeholder="01 23 45 67 89"
+                  placeholder="0123456789"
                   pattern="[0-9]{8,15}"
                   required
                 />
