@@ -18,12 +18,15 @@ export default function Reservation() {
   const [error, setError] = useState('')
   const router = useRouter()
 
-  // Générer les heures d'ouverture
+  // Date minimum (aujourd'hui)
+  const today = new Date().toISOString().split('T')[0]
+
+  // Générer les heures d'ouverture (13h-23h)
   const heuresDisponibles = []
   for (let i = 13; i <= 23; i++) {
-    for (let j = 0; j < 60; j += 30) {
-      const heure = `${i.toString().padStart(2, '0')}:${j.toString().padStart(2, '0')}`
-      heuresDisponibles.push(heure)
+    heuresDisponibles.push(`${i.toString().padStart(2, '0')}:00`)
+    if (i < 23) {
+      heuresDisponibles.push(`${i.toString().padStart(2, '0')}:30`)
     }
   }
 
@@ -33,28 +36,36 @@ export default function Reservation() {
     setError('')
 
     try {
+      // Préparer la date complète
+      const dateTimeReservation = `${formData.date_reservation}T${formData.heure_reservation}`
+
       const reservationData = {
         id_client: `reservation_${Date.now()}`,
         type_commande: 'sur_place',
-        nom_client: formData.nom,
+        nom_client: formData.nom, // ✅ Colonne maintenant existante
         telephone: formData.telephone,
-        produits: [], // Réservation sans commande spécifique
+        produits: [], 
         total: 0,
         statut: 'réservation',
         heure_reservation: formData.heure_reservation,
         instructions: formData.instructions,
-        nombre_personnes: formData.nombre_personnes,
+        nombre_personnes: formData.nombre_personnes, // ✅ Colonne maintenant existante
         created_at: new Date().toISOString()
       }
+
+      console.log('Données réservation:', reservationData)
 
       const { data, error } = await supabase
         .from('commandes')
         .insert([reservationData])
         .select()
 
-      if (error) throw error
+      if (error) {
+        console.error('Erreur Supabase:', error)
+        throw error
+      }
 
-      alert('✅ Réservation enregistrée ! Nous vous appellerons pour confirmation.')
+      alert('✅ Réservation enregistrée ! Nous vous appellerons au ' + formData.telephone + ' pour confirmation.')
       router.push('/')
       
     } catch (error) {
@@ -64,9 +75,6 @@ export default function Reservation() {
       setLoading(false)
     }
   }
-
-  // Date minimum (aujourd'hui)
-  const today = new Date().toISOString().split('T')[0]
 
   return (
     <div className="min-h-screen bg-dark pt-20">
