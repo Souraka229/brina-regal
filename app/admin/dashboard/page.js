@@ -83,13 +83,13 @@ export default function Dashboard() {
     }
   }
 
-  // 🔄 GESTION DES COMMANDES
+  // 🔄 GESTION DES COMMANDES - CORRIGÉ
   const modifierStatutCommande = async (commandeId, nouveauStatut) => {
     try {
       const { error } = await supabase
         .from('commandes')
         .update({ statut: nouveauStatut })
-        .eq('id', commandeId) // CORRECTION : "comman deId" → "commandeId"
+        .eq('id', commandeId) // ✅ CORRECT - pas d'espace
 
       if (error) throw error
 
