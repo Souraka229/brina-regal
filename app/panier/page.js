@@ -13,76 +13,106 @@ export default function Panier() {
   const [imagePreuve, setImagePreuve] = useState(null)
   const [uploading, setUploading] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [uploadError, setUploadError] = useState('')
   const router = useRouter()
 
   const handleImageUpload = async (e) => {
     const file = e.target.files[0]
     if (!file) return
 
-    // Vérifier la taille (max 5MB)
+    // Réinitialiser les erreurs
+    setUploadError('')
+
+    // Vérifications
     if (file.size > 5 * 1024 * 1024) {
-      alert('Image trop volumineuse (max 5MB)')
+      setUploadError('Image trop volumineuse (max 5MB)')
+      return
+    }
+
+    // Vérifier le type de fichier
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
+    if (!validTypes.includes(file.type)) {
+      setUploadError('Format non supporté (JPEG, PNG, WebP seulement)')
       return
     }
 
     setUploading(true)
-    const result = await uploadImage(file, 'paiements')
-    setUploading(false)
-
-    if (result.success) {
-      setImagePreuve(result.publicUrl)
-    } else {
-      alert('Erreur lors de l\'upload de l\'image')
+    
+    try {
+      const result = await uploadImage(file, 'paiements')
+      
+      if (result.success) {
+        setImagePreuve(result.publicUrl)
+        setUploadError('')
+      } else {
+        setUploadError(result.error || 'Erreur lors de l\'upload')
+      }
+    } catch (error) {
+      setUploadError('Erreur inattendue: ' + error.message)
+    } finally {
+      setUploading(false)
     }
   }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     setIsSubmitting(true)
+    setUploadError('')
 
     try {
-      // Vérification pour les commandes hors zone
+      // Validation
       if (lieu === 'hors_zone' && !imagePreuve) {
-        alert('Veuillez téléverser une preuve de paiement pour les commandes hors zone')
+        setUploadError('Veuillez téléverser une preuve de paiement')
         setIsSubmitting(false)
         return
       }
 
+      if (!telephone || telephone.length < 8) {
+        setUploadError('Numéro de téléphone invalide')
+        setIsSubmitting(false)
+        return
+      }
+
+      // Préparer les données de commande
       const commandeData = {
         id_client: `client_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         produits: items,
         total: getTotalPrice(),
-        telephone,
+        telephone: telephone.trim(),
         lieu_livraison: lieu,
         image_preuve: imagePreuve,
         statut: 'en attente',
         created_at: new Date().toISOString()
       }
 
+      console.log('Envoi commande:', commandeData)
+
+      // Insérer dans Supabase
       const { data, error } = await supabase
         .from('commandes')
         .insert([commandeData])
+        .select()
 
-      if (error) throw error
+      if (error) {
+        console.error('Supabase error:', error)
+        throw new Error(`Erreur base de données: ${error.message}`)
+      }
 
-      // Envoyer une notification (vous pouvez ajouter un webhook ou email plus tard)
-      await sendNotification(commandeData)
+      console.log('Commande créée:', data)
 
+      // Notification succès
+      alert('✅ Commande passée avec succès! Nous vous contacterons pour confirmation.')
+
+      // Vider le panier et rediriger
       clearCart()
-      alert('Commande passée avec succès! Nous vous contacterons pour confirmation.')
       router.push('/')
+
     } catch (error) {
-      console.error('Erreur commande:', error)
-      alert('Erreur lors de la commande: ' + error.message)
+      console.error('Erreur complète:', error)
+      setUploadError('Erreur lors de la commande: ' + error.message)
     } finally {
       setIsSubmitting(false)
     }
-  }
-
-  const sendNotification = async (commande) => {
-    // Ici vous pouvez intégrer avec un service de notifications
-    // Pour l'instant, on log juste dans la console
-    console.log('Nouvelle commande:', commande)
   }
 
   if (items.length === 0) {
@@ -175,12 +205,24 @@ export default function Panier() {
           <form onSubmit={handleSubmit} className="bg-black border border-gold/20 rounded-2xl p-6">
             <h2 className="text-2xl font-semibold text-gold mb-6">Informations de Livraison</h2>
             
+            {/* Message d'erreur global */}
+            {uploadError && (
+              <div className="bg-red-500/20 border border-red-500 rounded-lg p-4 mb-6">
+                <p className="text-red-400 flex items-center gap-2">
+                  ⚠️ {uploadError}
+                </p>
+              </div>
+            )}
+
             <div className="space-y-6">
               <div>
                 <label className="block text-cream mb-2">Lieu de livraison *</label>
                 <select
                   value={lieu}
-                  onChange={(e) => setLieu(e.target.value)}
+                  onChange={(e) => {
+                    setLieu(e.target.value)
+                    setUploadError('')
+                  }}
                   className="w-full bg-dark border border-gold/20 rounded-lg px-4 py-3 text-cream focus:outline-none focus:border-gold"
                   required
                 >
@@ -197,11 +239,16 @@ export default function Panier() {
                 <input
                   type="tel"
                   value={telephone}
-                  onChange={(e) => setTelephone(e.target.value)}
+                  onChange={(e) => {
+                    setTelephone(e.target.value)
+                    setUploadError('')
+                  }}
                   className="w-full bg-dark border border-gold/20 rounded-lg px-4 py-3 text-cream focus:outline-none focus:border-gold"
                   placeholder="01 23 45 67 89"
+                  pattern="[0-9]{8,15}"
                   required
                 />
+                <p className="text-cream/60 text-sm mt-1">Format: 0123456789 (sans espaces)</p>
               </div>
 
               {lieu === 'hors_zone' && (
@@ -214,34 +261,46 @@ export default function Panier() {
                   {imagePreuve ? (
                     <div className="mb-4">
                       <div className="bg-green-500/20 border border-green-500 rounded-lg p-4 mb-2">
-                        <p className="text-green-400">✅ Image téléversée avec succès</p>
+                        <p className="text-green-400 flex items-center gap-2">
+                          ✅ Image téléversée avec succès
+                        </p>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => setImagePreuve(null)}
-                        className="text-red-500 hover:text-red-400 text-sm"
-                      >
-                        Changer l'image
-                      </button>
+                      <div className="flex items-center gap-4">
+                        <img 
+                          src={imagePreuve} 
+                          alt="Preuve de paiement" 
+                          className="w-20 h-20 object-cover rounded-lg border border-gold/20"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setImagePreuve(null)
+                            setUploadError('')
+                          }}
+                          className="text-red-500 hover:text-red-400 text-sm bg-red-500/10 px-3 py-1 rounded"
+                        >
+                          Changer l'image
+                        </button>
+                      </div>
                     </div>
                   ) : (
-                    <div className="border-2 border-dashed border-gold/30 rounded-lg p-6 text-center">
+                    <div className="border-2 border-dashed border-gold/30 rounded-lg p-6 text-center hover:border-gold/50 transition-colors">
                       <input
                         type="file"
-                        accept="image/*"
+                        accept="image/jpeg, image/jpg, image/png, image/webp"
                         onChange={handleImageUpload}
                         className="hidden"
                         id="preuve-paiement"
-                        required
+                        required={lieu === 'hors_zone'}
                       />
                       <label
                         htmlFor="preuve-paiement"
                         className="cursor-pointer block"
                       >
                         <div className="text-4xl mb-2">📸</div>
-                        <p className="text-cream mb-2">Cliquez pour téléverser</p>
+                        <p className="text-cream mb-2 font-semibold">Cliquez pour téléverser</p>
                         <p className="text-cream/60 text-sm">
-                          Format: JPG, PNG (max 5MB)
+                          Formats: JPG, PNG, WebP (max 5MB)
                         </p>
                       </label>
                     </div>
@@ -249,31 +308,47 @@ export default function Panier() {
                   
                   {uploading && (
                     <div className="text-center py-4">
-                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gold mx-auto"></div>
-                      <p className="text-cream/60 mt-2">Upload en cours...</p>
+                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gold mx-auto mb-2"></div>
+                      <p className="text-cream/60 text-sm">Upload en cours...</p>
                     </div>
                   )}
                 </div>
               )}
 
+              {/* Instructions de paiement */}
               <div className="bg-gold/10 border border-gold/20 rounded-lg p-4">
-                <h4 className="text-gold font-semibold mb-2">💡 Information importante</h4>
-                <p className="text-cream/80 text-sm">
-                  {lieu === 'hors_zone' 
-                    ? 'Votre commande sera traitée après vérification de la preuve de dépôt.'
-                    : 'Paiement à la livraison. Présentez-vous avec le montant exact.'
-                  }
-                </p>
+                <h4 className="text-gold font-semibold mb-2">💡 Instructions de Paiement</h4>
+                {lieu === 'hors_zone' ? (
+                  <div className="text-cream/80 text-sm space-y-1">
+                    <p>1. Effectuez le transfert au: <span className="text-gold font-semibold">01 55 55 73 09</span></p>
+                    <p>2. Capturez l'écran de confirmation</p>
+                    <p>3. Téléversez la capture ci-dessus</p>
+                    <p className="text-orange font-semibold mt-2">⚠️ Commande traitée après vérification</p>
+                  </div>
+                ) : (
+                  <p className="text-cream/80 text-sm">
+                    💰 <span className="text-gold font-semibold">Paiement à la livraison</span> - Présentez-vous avec le montant exact
+                  </p>
+                )}
               </div>
 
               <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 type="submit"
-                disabled={isSubmitting || (lieu === 'hors_zone' && !imagePreuve)}
+                disabled={isSubmitting || uploading || (lieu === 'hors_zone' && !imagePreuve)}
                 className="w-full bg-gradient-to-r from-gold to-orange text-dark py-4 rounded-lg font-semibold text-lg hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isSubmitting ? 'Traitement en cours...' : 'Confirmer la Commande'}
+                {isSubmitting ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-dark"></div>
+                    Traitement en cours...
+                  </span>
+                ) : uploading ? (
+                  'Upload en cours...'
+                ) : (
+                  `Confirmer la Commande - ${getTotalPrice()} XOF`
+                )}
               </motion.button>
             </div>
           </form>
