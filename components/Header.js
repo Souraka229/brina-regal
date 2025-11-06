@@ -36,6 +36,9 @@ export default function Header() {
             <Link href="/menu" className="text-cream hover:text-gold transition-colors duration-300">
               Menu
             </Link>
+            <Link href="/reservation" className="text-cream hover:text-gold transition-colors duration-300">
+              Réserver
+            </Link>
             <Link 
               href="/menu" 
               className="bg-gradient-to-r from-gold to-orange text-dark px-6 py-2 rounded-full font-semibold hover:shadow-lg transition-all duration-300 hover:scale-105"
@@ -100,6 +103,13 @@ export default function Header() {
                 onClick={() => setIsMenuOpen(false)}
               >
                 Menu
+              </Link>
+              <Link 
+                href="/reservation" 
+                className="block text-cream hover:text-gold py-2 transition-colors"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                Réserver
               </Link>
               <Link 
                 href="/menu" 
