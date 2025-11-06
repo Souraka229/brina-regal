@@ -1,14 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  experimental: {
-    appDir: true,
-  },
   images: {
     domains: ['votre-projet.supabase.co'],
-    unoptimized: true // Important pour certains déploiements
+    unoptimized: true
   },
-  trailingSlash: true,
-  output: 'standalone'
+  trailingSlash: true
 }
 
 module.exports = nextConfig
