@@ -89,7 +89,7 @@ export default function Dashboard() {
       const { error } = await supabase
         .from('commandes')
         .update({ statut: nouveauStatut })
-        .eq('id', commandeId) // ✅ CORRECT - pas d'espace
+        .eq('id', commandeId) // ✅ CORRECT - PAS D'ESPACE
 
       if (error) throw error
 
