@@ -14,6 +14,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true)
   const [editingProduct, setEditingProduct] = useState(null)
   const [uploadingImage, setUploadingImage] = useState(false)
+  const [filtreStatut, setFiltreStatut] = useState('tous') // Nouveau filtre
   const router = useRouter()
 
   // États pour le formulaire
@@ -64,6 +65,20 @@ export default function Dashboard() {
     }
   }
 
+  // 🔄 FILTRER LES COMMANDES PAR STATUT
+  const commandesFiltrees = filtreStatut === 'tous' 
+    ? commandes 
+    : commandes.filter(cmd => cmd.statut === filtreStatut)
+
+  // 📊 STATISTIQUES PAR CATÉGORIE
+  const statsCommandes = {
+    tous: commandes.length,
+    'en attente': commandes.filter(c => c.statut === 'en attente').length,
+    'confirmé': commandes.filter(c => c.statut === 'confirmé').length,
+    'rejeté': commandes.filter(c => c.statut === 'rejeté').length,
+    'réservation': commandes.filter(c => c.statut === 'réservation').length
+  }
+
   // 🔄 GESTION DES COMMANDES
   const modifierStatutCommande = async (commandeId, nouveauStatut) => {
     try {
@@ -87,6 +102,26 @@ export default function Dashboard() {
     } catch (error) {
       console.error('Erreur mise à jour commande:', error)
       alert('❌ Erreur lors de la mise à jour: ' + error.message)
+    }
+  }
+
+  // 🗑️ SUPPRIMER UNE COMMANDE
+  const supprimerCommande = async (commandeId) => {
+    if (!confirm('Êtes-vous sûr de vouloir supprimer cette commande ? Cette action est irréversible.')) return
+
+    try {
+      const { error } = await supabase
+        .from('commandes')
+        .delete()
+        .eq('id', commandeId)
+
+      if (error) throw error
+
+      alert('✅ Commande supprimée avec succès!')
+      await fetchData()
+    } catch (error) {
+      console.error('Erreur suppression commande:', error)
+      alert('❌ Erreur: ' + error.message)
     }
   }
 
@@ -271,34 +306,28 @@ export default function Dashboard() {
         </div>
 
         {/* Statistiques */}
-        <div className="grid md:grid-cols-4 gap-6 mb-8">
-          <div className="bg-black border border-gold/20 rounded-2xl p-6">
-            <h3 className="text-gold font-semibold mb-2">Commandes aujourd'hui</h3>
-            <p className="text-3xl font-bold text-cream">
-              {commandes.filter(c => new Date(c.created_at).toDateString() === new Date().toDateString()).length}
-            </p>
-          </div>
-          
-          <div className="bg-black border border-gold/20 rounded-2xl p-6">
-            <h3 className="text-gold font-semibold mb-2">Revenus totaux</h3>
-            <p className="text-3xl font-bold text-cream">
-              {commandes.filter(c => c.statut === 'confirmé').reduce((total, cmd) => total + parseFloat(cmd.total || 0), 0).toLocaleString()} XOF
-            </p>
-          </div>
-          
-          <div className="bg-black border border-gold/20 rounded-2xl p-6">
-            <h3 className="text-gold font-semibold mb-2">Avis en attente</h3>
-            <p className="text-3xl font-bold text-cream">
-              {avis.filter(a => !a.valide).length}
-            </p>
-          </div>
-
-          <div className="bg-black border border-gold/20 rounded-2xl p-6">
-            <h3 className="text-gold font-semibold mb-2">Produits actifs</h3>
-            <p className="text-3xl font-bold text-cream">
-              {produits.filter(p => p.disponible).length}
-            </p>
-          </div>
+        <div className="grid md:grid-cols-5 gap-4 mb-8">
+          {[
+            { statut: 'tous', label: 'Total', count: statsCommandes.tous, color: 'bg-blue-500' },
+            { statut: 'en attente', label: 'En attente', count: statsCommandes['en attente'], color: 'bg-yellow-500' },
+            { statut: 'confirmé', label: 'Confirmées', count: statsCommandes['confirmé'], color: 'bg-green-500' },
+            { statut: 'rejeté', label: 'Rejetées', count: statsCommandes['rejeté'], color: 'bg-red-500' },
+            { statut: 'réservation', label: 'Réservations', count: statsCommandes['réservation'], color: 'bg-purple-500' }
+          ].map((stat) => (
+            <div 
+              key={stat.statut}
+              className={`bg-black border border-gold/20 rounded-2xl p-4 cursor-pointer transition-all hover:scale-105 ${
+                filtreStatut === stat.statut ? 'ring-2 ring-gold' : ''
+              }`}
+              onClick={() => setFiltreStatut(stat.statut)}
+            >
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-cream font-semibold text-sm">{stat.label}</h3>
+                <div className={`w-3 h-3 rounded-full ${stat.color}`}></div>
+              </div>
+              <p className="text-2xl font-bold text-gold">{stat.count}</p>
+            </div>
+          ))}
         </div>
 
         {/* Navigation onglets */}
@@ -321,30 +350,61 @@ export default function Dashboard() {
         {/* Contenu des onglets */}
         <div className="bg-black border border-gold/20 rounded-2xl p-6">
           
-          {/* COMMANDES */}
+          {/* COMMANDES AVEC FILTRES */}
           {activeTab === 'commandes' && (
             <div>
-              <h2 className="text-2xl font-semibold text-gold mb-6">
-                Commandes Récentes ({commandes.length})
-              </h2>
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-semibold text-gold">
+                  {filtreStatut === 'tous' ? 'Toutes les commandes' : 
+                   filtreStatut === 'en attente' ? 'Commandes en attente' :
+                   filtreStatut === 'confirmé' ? 'Commandes confirmées' :
+                   filtreStatut === 'rejeté' ? 'Commandes rejetées' : 'Réservations'} 
+                  ({commandesFiltrees.length})
+                </h2>
+                
+                <div className="flex items-center space-x-4">
+                  <span className="text-cream/60 text-sm">
+                    Filtre: <span className="text-gold capitalize">{filtreStatut}</span>
+                  </span>
+                  <button
+                    onClick={() => setFiltreStatut('tous')}
+                    className="text-gold hover:text-orange text-sm"
+                  >
+                    Voir tout
+                  </button>
+                </div>
+              </div>
               
-              {commandes.length === 0 ? (
+              {commandesFiltrees.length === 0 ? (
                 <div className="text-center py-12">
-                  <p className="text-cream/60 text-xl">Aucune commande pour le moment</p>
+                  <p className="text-cream/60 text-xl">
+                    {filtreStatut === 'tous' 
+                      ? 'Aucune commande pour le moment' 
+                      : `Aucune commande avec le statut "${filtreStatut}"`}
+                  </p>
+                  {filtreStatut !== 'tous' && (
+                    <button
+                      onClick={() => setFiltreStatut('tous')}
+                      className="mt-4 text-gold hover:text-orange"
+                    >
+                      Voir toutes les commandes
+                    </button>
+                  )}
                 </div>
               ) : (
                 <div className="space-y-6">
-                  {commandes.map(commande => (
+                  {commandesFiltrees.map(commande => (
                     <div key={commande.id} className="border border-gold/20 rounded-lg p-6">
                       <div className="flex justify-between items-start mb-4">
                         <div className="flex-1">
                           <div className="flex items-center space-x-4 mb-2">
                             <h3 className="text-gold font-semibold text-lg">
-                              Commande #{commande.id}
+                              {commande.statut === 'réservation' ? '📅 Réservation' : '📦 Commande'} #{commande.id}
                             </h3>
                             <span className={`px-3 py-1 rounded-full text-sm ${
                               commande.statut === 'confirmé' ? 'bg-green-500' :
                               commande.statut === 'rejeté' ? 'bg-red-500' :
+                              commande.statut === 'réservation' ? 'bg-purple-500' :
                               'bg-yellow-500'
                             }`}>
                               {commande.statut}
@@ -354,39 +414,65 @@ export default function Dashboard() {
                           <div className="grid md:grid-cols-2 gap-4 text-sm">
                             <div>
                               <p className="text-cream">
+                                <span className="text-gold">👤 Client:</span> {commande.nom_client || 'Non renseigné'}
+                              </p>
+                              <p className="text-cream">
                                 <span className="text-gold">📞 Téléphone:</span> {commande.telephone}
                               </p>
                               <p className="text-cream">
-                                <span className="text-gold">📍 Lieu:</span> {commande.lieu_livraison}
+                                <span className="text-gold">📍 Type:</span> {commande.type_commande || 'À emporter'}
                               </p>
+                            </div>
+                            <div>
                               <p className="text-cream">
                                 <span className="text-gold">📅 Date:</span> {new Date(commande.created_at).toLocaleString('fr-FR')}
                               </p>
-                            </div>
-                            <div className="text-right md:text-left">
+                              {commande.heure_reservation && (
+                                <p className="text-cream">
+                                  <span className="text-gold">🕐 Heure réservation:</span> {commande.heure_reservation}
+                                </p>
+                              )}
                               <p className="text-2xl font-bold text-orange">
-                                {commande.total} XOF
+                                {commande.total > 0 ? `${commande.total} XOF` : 'Réservation'}
                               </p>
                             </div>
                           </div>
                         </div>
                       </div>
                       
-                      {/* Produits commandés */}
-                      <div className="mb-4">
-                        <h4 className="text-cream font-semibold mb-3">🛒 Produits commandés:</h4>
-                        <div className="space-y-2 bg-dark/50 rounded-lg p-4">
-                          {Array.isArray(commande.produits) && commande.produits.map((item, index) => (
-                            <div key={index} className="flex justify-between items-center text-cream/80">
-                              <div>
-                                <span className="font-medium">{item.nom}</span>
-                                <span className="text-sm ml-2">x{item.quantity}</span>
+                      {/* Produits commandés (uniquement pour les commandes avec produits) */}
+                      {commande.produits && Array.isArray(commande.produits) && commande.produits.length > 0 && (
+                        <div className="mb-4">
+                          <h4 className="text-cream font-semibold mb-3">🛒 Produits commandés:</h4>
+                          <div className="space-y-2 bg-dark/50 rounded-lg p-4">
+                            {commande.produits.map((item, index) => (
+                              <div key={index} className="flex justify-between items-center text-cream/80">
+                                <div>
+                                  <span className="font-medium">{item.nom}</span>
+                                  <span className="text-sm ml-2">x{item.quantity}</span>
+                                </div>
+                                <span>{(item.prix * item.quantity).toLocaleString()} XOF</span>
                               </div>
-                              <span>{(item.prix * item.quantity).toLocaleString()} XOF</span>
-                            </div>
-                          ))}
+                            ))}
+                          </div>
                         </div>
-                      </div>
+                      )}
+
+                      {/* Adresse de livraison */}
+                      {commande.adresse_livraison && (
+                        <div className="mb-4">
+                          <h4 className="text-cream font-semibold mb-2">🏠 Adresse de livraison:</h4>
+                          <p className="text-cream/80 bg-dark/50 rounded-lg p-3">{commande.adresse_livraison}</p>
+                        </div>
+                      )}
+
+                      {/* Instructions */}
+                      {commande.instructions && (
+                        <div className="mb-4">
+                          <h4 className="text-cream font-semibold mb-2">💬 Instructions:</h4>
+                          <p className="text-cream/80 bg-dark/50 rounded-lg p-3">{commande.instructions}</p>
+                        </div>
+                      )}
 
                       {/* Preuve de paiement */}
                       {commande.image_preuve && (
@@ -402,25 +488,40 @@ export default function Dashboard() {
                         </div>
                       )}
 
-                      {/* Actions */}
-                      <div className="flex flex-wrap gap-2">
+                      {/* Actions selon le statut */}
+                      <div className="flex flex-wrap gap-2 justify-between items-center">
+                        <div className="flex flex-wrap gap-2">
+                          {commande.statut !== 'confirmé' && (
+                            <button
+                              onClick={() => modifierStatutCommande(commande.id, 'confirmé')}
+                              className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 transition-colors"
+                            >
+                              ✅ Confirmer
+                            </button>
+                          )}
+                          {commande.statut !== 'rejeté' && (
+                            <button
+                              onClick={() => modifierStatutCommande(commande.id, 'rejeté')}
+                              className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 transition-colors"
+                            >
+                              ❌ Rejeter
+                            </button>
+                          )}
+                          {commande.statut !== 'en attente' && commande.statut !== 'réservation' && (
+                            <button
+                              onClick={() => modifierStatutCommande(commande.id, 'en attente')}
+                              className="bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600 transition-colors"
+                            >
+                              ⏳ En attente
+                            </button>
+                          )}
+                        </div>
+                        
                         <button
-                          onClick={() => modifierStatutCommande(commande.id, 'confirmé')}
-                          className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 transition-colors"
+                          onClick={() => supprimerCommande(commande.id)}
+                          className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 transition-colors text-sm"
                         >
-                          ✅ Confirmer
-                        </button>
-                        <button
-                          onClick={() => modifierStatutCommande(commande.id, 'rejeté')}
-                          className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 transition-colors"
-                        >
-                          ❌ Rejeter
-                        </button>
-                        <button
-                          onClick={() => modifierStatutCommande(commande.id, 'en attente')}
-                          className="bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600 transition-colors"
-                        >
-                          ⏳ En attente
+                          🗑️ Supprimer
                         </button>
                       </div>
                     </div>
@@ -438,7 +539,7 @@ export default function Dashboard() {
                 <span className="text-cream/80">{produits.filter(p => p.disponible).length} produits actifs</span>
               </div>
 
-              {/* Formulaire ajout/modification */}
+              {/* Formulaire ajout/modification produit */}
               <div className="bg-dark p-6 rounded-lg mb-8 border border-gold/20">
                 <h3 className="text-xl font-semibold text-gold mb-4">
                   {editingProduct ? '✏️ Modifier le produit' : '➕ Ajouter un nouveau produit'}
