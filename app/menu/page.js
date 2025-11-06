@@ -1,67 +1,88 @@
-'use client';
-import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { supabase } from '@/lib/supabaseClient';
+'use client'
+import { useState, useEffect } from 'react'
+import { motion } from 'framer-motion'
+import { supabase } from '@/lib/supabaseClient'
+import { useCart } from '@/context/CartContext'
+import Link from 'next/link'
 
 export default function Menu() {
-  const [products, setProducts] = useState([]);
-  const [cart, setCart] = useState([]);
-  const [categories, setCategories] = useState([]);
-  const [selectedCategory, setSelectedCategory] = useState('Tous');
+  const [products, setProducts] = useState([])
+  const [categories, setCategories] = useState([])
+  const [selectedCategory, setSelectedCategory] = useState('Tous')
+  const [loading, setLoading] = useState(true)
+  const { addItem, getTotalItems } = useCart()
 
   useEffect(() => {
-    fetchProducts();
-  }, []);
+    fetchProducts()
+  }, [])
 
   const fetchProducts = async () => {
-    const { data } = await supabase
-      .from('produits')
-      .select('*')
-      .eq('disponible', true);
-    
-    if (data) {
-      setProducts(data);
-      const uniqueCategories = ['Tous', ...new Set(data.map(p => p.categorie))];
-      setCategories(uniqueCategories);
-    }
-  };
+    try {
+      const { data, error } = await supabase
+        .from('produits')
+        .select('*')
+        .eq('disponible', true)
+        .order('nom')
 
-  const addToCart = (product) => {
-    setCart(prev => {
-      const existing = prev.find(item => item.id === product.id);
-      if (existing) {
-        return prev.map(item => 
-          item.id === product.id 
-            ? { ...item, quantity: item.quantity + 1 }
-            : item
-        );
+      if (error) throw error
+
+      if (data) {
+        setProducts(data)
+        const uniqueCategories = ['Tous', ...new Set(data.map(p => p.categorie))]
+        setCategories(uniqueCategories)
       }
-      return [...prev, { ...product, quantity: 1 }];
-    });
-  };
+    } catch (error) {
+      console.error('Erreur chargement produits:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const filteredProducts = selectedCategory === 'Tous' 
     ? products 
-    : products.filter(p => p.categorie === selectedCategory);
+    : products.filter(p => p.categorie === selectedCategory)
 
-  const total = cart.reduce((sum, item) => sum + (item.prix * item.quantity), 0);
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-dark pt-20 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gold"></div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-dark pt-20">
       <div className="container mx-auto px-4 py-8">
-        <motion.h1 
-          initial={{ opacity: 0, y: 50 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-4xl md:text-5xl font-poppins font-bold text-center mb-8 gradient-text"
-        >
-          Notre Menu
-        </motion.h1>
+        {/* En-tête avec compteur panier */}
+        <div className="flex justify-between items-center mb-8">
+          <motion.h1 
+            initial={{ opacity: 0, y: 50 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-4xl md:text-5xl font-poppins font-bold gradient-text"
+          >
+            Notre Menu
+          </motion.h1>
+          
+          <Link 
+            href="/panier"
+            className="relative bg-gradient-to-r from-gold to-orange text-dark px-6 py-3 rounded-full font-semibold hover:shadow-lg transition-all"
+          >
+            🛒 Panier
+            {getTotalItems() > 0 && (
+              <span className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm">
+                {getTotalItems()}
+              </span>
+            )}
+          </Link>
+        </div>
 
         {/* Filtres par catégorie */}
         <div className="flex flex-wrap gap-4 justify-center mb-12">
           {categories.map(category => (
-            <button
+            <motion.button
               key={category}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
               onClick={() => setSelectedCategory(category)}
               className={`px-6 py-3 rounded-full font-semibold transition-all ${
                 selectedCategory === category
@@ -70,7 +91,7 @@ export default function Menu() {
               }`}
             >
               {category}
-            </button>
+            </motion.button>
           ))}
         </div>
 
@@ -82,19 +103,21 @@ export default function Menu() {
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: index * 0.1 }}
-              whileHover={{ scale: 1.05 }}
-              className="bg-black border border-gold/20 rounded-2xl p-6 hover:shadow-2xl transition-all"
+              whileHover={{ scale: 1.02 }}
+              className="bg-black border border-gold/20 rounded-2xl p-6 hover:shadow-2xl transition-all duration-300"
             >
-              <div className="w-full h-48 bg-gradient-to-br from-gold/20 to-orange/20 rounded-xl mb-4"></div>
+              <div className="w-full h-48 bg-gradient-to-br from-gold/20 to-orange/20 rounded-xl mb-4 flex items-center justify-center">
+                <span className="text-cream/50">🍽️ {product.nom}</span>
+              </div>
               <h3 className="text-xl font-semibold text-gold mb-2">{product.nom}</h3>
-              <p className="text-cream/70 mb-4 text-sm">{product.description}</p>
+              <p className="text-cream/70 mb-4 text-sm line-clamp-2">{product.description}</p>
               <div className="flex justify-between items-center">
                 <span className="text-2xl font-bold text-orange">{product.prix} XOF</span>
                 <motion.button
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.9 }}
-                  onClick={() => addToCart(product)}
-                  className="bg-gradient-to-r from-gold to-orange text-dark px-6 py-2 rounded-full font-semibold hover:shadow-lg transition-all"
+                  onClick={() => addItem(product)}
+                  className="bg-gradient-to-r from-gold to-orange text-dark px-6 py-2 rounded-full font-semibold hover:shadow-lg transition-all duration-300"
                 >
                   Ajouter
                 </motion.button>
@@ -102,28 +125,13 @@ export default function Menu() {
             </motion.div>
           ))}
         </div>
-      </div>
 
-      {/* Panier flottant */}
-      {cart.length > 0 && (
-        <motion.div
-          initial={{ y: 100, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          className="fixed bottom-6 right-6 bg-gradient-to-r from-gold to-orange text-dark p-6 rounded-2xl shadow-2xl"
-        >
-          <div className="text-center">
-            <p className="font-semibold mb-2">{cart.length} article(s)</p>
-            <p className="text-2xl font-bold mb-4">{total} XOF</p>
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="bg-dark text-gold px-8 py-3 rounded-full font-semibold hover:bg-black transition-colors"
-            >
-              Commander
-            </motion.button>
+        {filteredProducts.length === 0 && (
+          <div className="text-center py-12">
+            <p className="text-cream/60 text-xl">Aucun produit dans cette catégorie</p>
           </div>
-        </motion.div>
-      )}
+        )}
+      </div>
     </div>
-  );
+  )
 }
