@@ -1,120 +1,107 @@
 'use client'
+
 import { createContext, useContext, useReducer, useEffect } from 'react'
 
 const CartContext = createContext()
 
+const initialState = { items: [] }
+
+// Helper pour vérifier si on est côté client
+const isClient = typeof window !== 'undefined'
+
+// Helper pour sauvegarder le panier dans localStorage
+const saveCart = (items) => {
+  if (isClient) localStorage.setItem('brina-cart', JSON.stringify(items))
+}
+
 const cartReducer = (state, action) => {
   switch (action.type) {
     case 'LOAD_CART':
-      return {
-        ...state,
-        items: action.payload || []
-      }
-    case 'ADD_ITEM':
+      return { items: action.payload || [] }
+
+    case 'ADD_ITEM': {
       const existingItem = state.items.find(item => item.id === action.payload.id)
-      let newItems
-      
-      if (existingItem) {
-        newItems = state.items.map(item =>
+      const newItems = existingItem
+        ? state.items.map(item =>
+            item.id === action.payload.id
+              ? { ...item, quantity: item.quantity + 1 }
+              : item
+          )
+        : [...state.items, { ...action.payload, quantity: 1 }]
+
+      saveCart(newItems)
+      return { items: newItems }
+    }
+
+    case 'REMOVE_ITEM': {
+      const filteredItems = state.items.filter(item => item.id !== action.payload)
+      saveCart(filteredItems)
+      return { items: filteredItems }
+    }
+
+    case 'UPDATE_QUANTITY': {
+      const updatedItems = state.items
+        .map(item =>
           item.id === action.payload.id
-            ? { ...item, quantity: item.quantity + 1 }
+            ? { ...item, quantity: action.payload.quantity }
             : item
         )
-      } else {
-        newItems = [...state.items, { ...action.payload, quantity: 1 }]
-      }
+        .filter(item => item.quantity > 0)
 
-      // Sauvegarder dans localStorage
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('brina-cart', JSON.stringify(newItems))
-      }
+      saveCart(updatedItems)
+      return { items: updatedItems }
+    }
 
-      return { ...state, items: newItems }
-    
-    case 'REMOVE_ITEM':
-      const filteredItems = state.items.filter(item => item.id !== action.payload)
-      
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('brina-cart', JSON.stringify(filteredItems))
-      }
-
-      return { ...state, items: filteredItems }
-    
-    case 'UPDATE_QUANTITY':
-      const updatedItems = state.items.map(item =>
-        item.id === action.payload.id
-          ? { ...item, quantity: action.payload.quantity }
-          : item
-      ).filter(item => item.quantity > 0)
-
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('brina-cart', JSON.stringify(updatedItems))
-      }
-
-      return { ...state, items: updatedItems }
-    
     case 'CLEAR_CART':
-      if (typeof window !== 'undefined') {
-        localStorage.removeItem('brina-cart')
-      }
-      return { ...state, items: [] }
-    
+      if (isClient) localStorage.removeItem('brina-cart')
+      return { items: [] }
+
     default:
       return state
   }
-}
-
-const initialState = {
-  items: []
 }
 
 export function CartProvider({ children }) {
   const [state, dispatch] = useReducer(cartReducer, initialState)
 
   useEffect(() => {
-    // Charger le panier depuis localStorage
-    if (typeof window !== 'undefined') {
+    if (isClient) {
       const savedCart = localStorage.getItem('brina-cart')
       if (savedCart) {
-        dispatch({ type: 'LOAD_CART', payload: JSON.parse(savedCart) })
+        try {
+          dispatch({ type: 'LOAD_CART', payload: JSON.parse(savedCart) })
+        } catch (error) {
+          console.error('Erreur lors du chargement du panier:', error)
+        }
       }
     }
   }, [])
 
-  const addItem = (product) => {
-    dispatch({ type: 'ADD_ITEM', payload: product })
-  }
-
-  const removeItem = (productId) => {
-    dispatch({ type: 'REMOVE_ITEM', payload: productId })
-  }
-
-  const updateQuantity = (productId, quantity) => {
+  // Actions du panier
+  const addItem = (product) => dispatch({ type: 'ADD_ITEM', payload: product })
+  const removeItem = (productId) => dispatch({ type: 'REMOVE_ITEM', payload: productId })
+  const updateQuantity = (productId, quantity) =>
     dispatch({ type: 'UPDATE_QUANTITY', payload: { id: productId, quantity } })
-  }
+  const clearCart = () => dispatch({ type: 'CLEAR_CART' })
 
-  const clearCart = () => {
-    dispatch({ type: 'CLEAR_CART' })
-  }
-
-  const getTotalPrice = () => {
-    return state.items.reduce((total, item) => total + (item.prix * item.quantity), 0)
-  }
-
-  const getTotalItems = () => {
-    return state.items.reduce((total, item) => total + item.quantity, 0)
-  }
+  // Calculs du panier
+  const getTotalPrice = () =>
+    state.items.reduce((total, item) => total + parseFloat(item.prix) * item.quantity, 0)
+  const getTotalItems = () =>
+    state.items.reduce((total, item) => total + item.quantity, 0)
 
   return (
-    <CartContext.Provider value={{
-      items: state.items,
-      addItem,
-      removeItem,
-      updateQuantity,
-      clearCart,
-      getTotalPrice,
-      getTotalItems
-    }}>
+    <CartContext.Provider
+      value={{
+        items: state.items,
+        addItem,
+        removeItem,
+        updateQuantity,
+        clearCart,
+        getTotalPrice,
+        getTotalItems
+      }}
+    >
       {children}
     </CartContext.Provider>
   )
@@ -123,7 +110,7 @@ export function CartProvider({ children }) {
 export const useCart = () => {
   const context = useContext(CartContext)
   if (!context) {
-    throw new Error('useCart must be used within a CartProvider')
+    throw new Error('useCart doit être utilisé dans un CartProvider')
   }
   return context
 }
