@@ -16,44 +16,47 @@ export default function Panier() {
   const [uploadError, setUploadError] = useState('')
   const router = useRouter()
 
+  // --------------------- Fonction d'upload ---------------------
   const handleImageUpload = async (e) => {
     const file = e.target.files[0]
     if (!file) return
 
-    // Réinitialiser les erreurs
     setUploadError('')
+    setUploading(true)
 
     // Vérifications
     if (file.size > 5 * 1024 * 1024) {
-      setUploadError('Image trop volumineuse (max 5MB)')
+      setUploadError('❌ Image trop volumineuse (max 5MB)')
+      setUploading(false)
       return
     }
 
-    // Vérifier le type de fichier
     const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
     if (!validTypes.includes(file.type)) {
-      setUploadError('Format non supporté (JPEG, PNG, WebP seulement)')
+      setUploadError('❌ Format non supporté (JPEG, PNG, WebP seulement)')
+      setUploading(false)
       return
     }
 
-    setUploading(true)
-    
     try {
       const result = await uploadImage(file, 'paiements')
-      
-      if (result.success) {
+
+      if (result.success && result.publicUrl) {
         setImagePreuve(result.publicUrl)
         setUploadError('')
+        console.log('✅ Image uploadée:', result.publicUrl)
       } else {
-        setUploadError(result.error || 'Erreur lors de l\'upload')
+        setUploadError(result.error || '❌ Erreur lors de l\'upload')
       }
     } catch (error) {
-      setUploadError('Erreur inattendue: ' + error.message)
+      console.error('Erreur upload:', error)
+      setUploadError('❌ Erreur inattendue: ' + (error.message || error))
     } finally {
       setUploading(false)
     }
   }
 
+  // --------------------- Soumission de commande ---------------------
   const handleSubmit = async (e) => {
     e.preventDefault()
     setIsSubmitting(true)
@@ -115,6 +118,7 @@ export default function Panier() {
     }
   }
 
+  // --------------------- Affichage panier vide ---------------------
   if (items.length === 0) {
     return (
       <div className="min-h-screen bg-dark pt-20">
@@ -140,6 +144,7 @@ export default function Panier() {
     )
   }
 
+  // --------------------- Affichage panier avec formulaire ---------------------
   return (
     <div className="min-h-screen bg-dark pt-20">
       <div className="container mx-auto px-4 py-8">
