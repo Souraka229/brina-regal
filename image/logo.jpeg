@@ -1,0 +1,559 @@
+'use client'
+import { motion } from 'framer-motion'
+import Link from 'next/link'
+import { useEffect, useState } from 'react'
+import { supabase } from '../lib/supabaseClient'
+
+// Animations
+const fadeInUp = {
+  initial: { opacity: 0, y: 60 },
+  animate: { opacity: 1, y: 0 },
+  transition: { duration: 0.8, ease: "easeOut" }
+}
+
+const staggerContainer = {
+  animate: {
+    transition: {
+      staggerChildren: 0.2
+    }
+  }
+}
+
+const scaleIn = {
+  initial: { opacity: 0, scale: 0.9 },
+  animate: { opacity: 1, scale: 1 },
+  transition: { duration: 0.6, ease: "easeOut" }
+}
+
+export default function Home() {
+  const [popularProducts, setPopularProducts] = useState([])
+  const [reviews, setReviews] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    fetchData()
+  }, [])
+
+  const fetchData = async () => {
+    try {
+      // Données mock pour le design
+      const mockProducts = [
+        {
+          id: 1,
+          nom: "Poulet Braisé Maison",
+          description: "Poulet mariné 24h aux épices secrètes, braisé au feu de bois, servi avec alloco croustillant et notre sauce signature",
+          prix: 5500,
+          categorie: "Spécialités",
+          image_url: "/images/logo.jpeg"
+        },
+        {
+          id: 2,
+          nom: "Poisson Braisé Frais",
+          description: "Capitaine du jour, mariné aux herbes fraîches, accompagné de riz parfumé et légumes de saison",
+          prix: 6500,
+          categorie: "Spécialités",
+          image_url: "/images/logo.jpg"
+        },
+        {
+          id: 3,
+          nom: "Riz Gras Royal",
+          description: "Notre riz signature cuit lentement avec viande tendre, tomates fraîches et un mélange d'épices exclusif",
+          prix: 3500,
+          categorie: "Plats Signature",
+          image_url: "/images/logo.jpeg"
+        }
+      ]
+
+      const mockReviews = [
+        {
+          id: 1,
+          nom_client: "Marie K.",
+          message: "Le meilleur poulet braisé d'Abomey-Calavi ! Les saveurs sont incroyables et le service impeccable.",
+          note: 5
+        },
+        {
+          id: 2,
+          nom_client: "Jean D.",
+          message: "Découverte exceptionnelle ! Le riz gras est à tomber. Je recommande vivement.",
+          note: 5
+        },
+        {
+          id: 3,
+          nom_client: "Aïcha T.",
+          message: "Cadre chaleureux, personnel attentionné et plats délicieux. Notre adresse préférée !",
+          note: 5
+        }
+      ]
+
+      setPopularProducts(mockProducts)
+      setReviews(mockReviews)
+      
+      // Essayer de charger les vraies données
+      if (typeof window !== 'undefined') {
+        const { data: productsData } = await supabase
+          .from('produits')
+          .select('*')
+          .eq('disponible', true)
+          .limit(6)
+        
+        const { data: reviewsData } = await supabase
+          .from('avis')
+          .select('*')
+          .eq('valide', true)
+          .limit(5)
+
+        if (productsData && productsData.length > 0) setPopularProducts(productsData)
+        if (reviewsData && reviewsData.length > 0) setReviews(reviewsData)
+      }
+    } catch (error) {
+      console.log('Using enhanced mock data')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="min-h-screen bg-dark overflow-hidden">
+      {/* Hero Section Spectaculaire */}
+      <section className="relative min-h-screen flex items-center justify-center bg-gradient-to-br from-dark via-black to-orange-900/30">
+        {/* Background Animé */}
+        <div className="absolute inset-0">
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-gold/10 via-transparent to-transparent"></div>
+          <div className="absolute top-0 left-0 w-72 h-72 bg-gold/5 rounded-full blur-3xl animate-pulse"></div>
+          <div className="absolute bottom-0 right-0 w-96 h-96 bg-orange/5 rounded-full blur-3xl animate-pulse delay-1000"></div>
+        </div>
+
+        {/* Content Hero */}
+        <div className="relative z-10 text-center px-4 max-w-6xl mx-auto">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.5 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 1, ease: "easeOut" }}
+            className="mb-8"
+          >
+            <div className="w-32 h-32 mx-auto mb-6 bg-gradient-to-br from-gold to-orange rounded-3xl p-1 shadow-2xl">
+              <div className="w-full h-full bg-dark rounded-2xl flex items-center justify-center p-2">
+                <img 
+                  src="/images/logo.jpg" 
+                  alt="Brina'Régal" 
+                  className="w-full h-full object-cover rounded-2xl"
+                />
+              </div>
+            </div>
+          </motion.div>
+
+          <motion.h1
+            initial={{ opacity: 0, y: 50 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.2 }}
+            className="text-5xl md:text-7xl lg:text-8xl font-poppins font-black mb-6"
+          >
+            <span className="bg-gradient-to-r from-gold via-orange to-gold bg-clip-text text-transparent animate-gradient">
+              Brina'Régal
+            </span>
+          </motion.h1>
+
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.4 }}
+            className="mb-8"
+          >
+            <h2 className="text-2xl md:text-4xl font-poppins font-bold text-cream mb-4">
+              Le Goût Royal d'
+              <span className="text-gold">Abomey-Calavi</span>
+            </h2>
+            <p className="text-xl md:text-2xl text-cream/80 max-w-3xl mx-auto leading-relaxed">
+              Une expérience culinaire exceptionnelle où la tradition rencontre l'excellence, 
+              au cœur de <span className="text-gold font-semibold">Dekoungbé</span>
+            </p>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.6 }}
+            className="flex flex-col sm:flex-row gap-6 justify-center items-center"
+          >
+            <Link 
+              href="/menu"
+              className="group relative bg-gradient-to-r from-gold to-orange text-dark px-12 py-6 rounded-2xl text-xl font-bold hover:shadow-2xl transition-all duration-500 transform hover:scale-105 hover:rotate-1 overflow-hidden"
+            >
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000"></div>
+              <span className="relative">Découvrir Notre Menu</span>
+            </Link>
+            
+            <Link 
+              href="#specialites"
+              className="group border-2 border-gold text-gold px-12 py-6 rounded-2xl text-xl font-bold hover:bg-gold hover:text-dark transition-all duration-500 transform hover:scale-105"
+            >
+              <span className="relative">Nos Spécialités</span>
+            </Link>
+          </motion.div>
+
+          {/* Stats Hero */}
+          <motion.div
+            initial={{ opacity: 0, y: 50 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.8 }}
+            className="grid grid-cols-3 gap-8 mt-16 max-w-2xl mx-auto"
+          >
+            {[
+              { number: '50+', text: 'Plats Uniques' },
+              { number: '100%', text: 'Frais du Jour' },
+              { number: '⭐ 4.9', text: 'Avis Clients' }
+            ].map((stat, index) => (
+              <div key={index} className="text-center">
+                <div className="text-2xl md:text-3xl font-bold text-gold mb-2">{stat.number}</div>
+                <div className="text-cream/70 text-sm">{stat.text}</div>
+              </div>
+            ))}
+          </motion.div>
+        </div>
+
+        {/* Scroll Indicator */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 1, delay: 1.5 }}
+          className="absolute bottom-8 left-1/2 transform -translate-x-1/2"
+        >
+          <div className="animate-bounce">
+            <div className="w-6 h-10 border-2 border-gold rounded-full flex justify-center">
+              <div className="w-1 h-3 bg-gold rounded-full mt-2"></div>
+            </div>
+          </div>
+        </motion.div>
+      </section>
+
+      {/* Section Spécialités */}
+      <section id="specialites" className="py-20 relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/50"></div>
+        <div className="container mx-auto px-4 relative z-10">
+          <motion.div
+            initial={{ opacity: 0, y: 50 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+            className="text-center mb-16"
+          >
+            <h2 className="text-5xl md:text-6xl font-poppins font-black mb-6">
+              <span className="bg-gradient-to-r from-gold via-orange to-gold bg-clip-text text-transparent">
+                Nos Créations
+              </span>
+            </h2>
+            <p className="text-xl text-cream/80 max-w-2xl mx-auto">
+              Découvrez nos plats signature, préparés avec passion et des ingrédients 
+              soigneusement sélectionnés pour votre plus grand plaisir
+            </p>
+          </motion.div>
+
+          <motion.div
+            variants={staggerContainer}
+            initial="initial"
+            whileInView="animate"
+            viewport={{ once: true }}
+            className="grid md:grid-cols-2 lg:grid-cols-3 gap-8"
+          >
+            {popularProducts.map((product, index) => (
+              <motion.div
+                key={product.id}
+                variants={scaleIn}
+                className="group relative bg-gradient-to-br from-black to-dark border border-gold/20 rounded-3xl p-1 hover:shadow-2xl transition-all duration-500 overflow-hidden"
+              >
+                <div className="relative h-80 rounded-2xl overflow-hidden">
+                  <div className="w-full h-full bg-gradient-to-br from-gold/20 to-orange/20 flex items-center justify-center">
+                    <img 
+                      src={product.image_url || "/images/logo.jpg"} 
+                      alt={product.nom}
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                    />
+                  </div>
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                  <div className="absolute bottom-4 left-4 right-4 transform translate-y-4 group-hover:translate-y-0 transition-transform duration-500">
+                    <h3 className="text-xl font-bold text-white mb-2">{product.nom}</h3>
+                    <p className="text-gold text-lg font-bold">{product.prix} XOF</p>
+                  </div>
+                </div>
+                
+                <div className="p-6">
+                  <p className="text-cream/70 mb-4 line-clamp-2">{product.description}</p>
+                  <div className="flex justify-between items-center">
+                    <span className="text-gold font-semibold">{product.categorie}</span>
+                    <Link 
+                      href="/menu"
+                      className="bg-gold text-dark px-6 py-2 rounded-full font-semibold hover:bg-orange transition-all duration-300 transform hover:scale-105"
+                    >
+                      Commander
+                    </Link>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.4 }}
+            className="text-center mt-12"
+          >
+            <Link 
+              href="/menu"
+              className="inline-flex items-center gap-4 border-2 border-gold text-gold px-12 py-4 rounded-2xl text-lg font-bold hover:bg-gold hover:text-dark transition-all duration-500 group"
+            >
+              Voir Tout le Menu
+              <span className="group-hover:translate-x-2 transition-transform duration-300">→</span>
+            </Link>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Section À Propos Premium */}
+      <section className="py-20 bg-gradient-to-br from-black to-dark relative overflow-hidden">
+        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-gold to-transparent"></div>
+        <div className="container mx-auto px-4">
+          <div className="grid lg:grid-cols-2 gap-12 items-center">
+            <motion.div
+              initial={{ opacity: 0, x: -50 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.8 }}
+              className="relative"
+            >
+              <div className="relative rounded-3xl overflow-hidden border border-gold/20">
+                <div className="aspect-square bg-gradient-to-br from-gold/10 to-orange/10 flex items-center justify-center">
+                  <img 
+                    src="/images/logo.jpg" 
+                    alt="Brina'Régal Restaurant" 
+                    className="w-64 h-64 object-cover rounded-2xl"
+                  />
+                </div>
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+              </div>
+            </motion.div>
+            
+            <motion.div
+              initial={{ opacity: 0, x: 50 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.8 }}
+            >
+              <h2 className="text-4xl md:text-5xl font-poppins font-black mb-8">
+                <span className="bg-gradient-to-r from-gold to-orange bg-clip-text text-transparent">
+                  Notre Histoire
+                </span>
+              </h2>
+              
+              <div className="space-y-6 text-lg text-cream/80 leading-relaxed">
+                <p>
+                  Fondé en 2024 au cœur de <span className="text-gold font-semibold">Dekoungbé</span>, 
+                  <span className="text-orange font-bold"> Brina'Régal</span> incarne l'excellence 
+                  culinaire béninoise revisitée avec une touche contemporaine.
+                </p>
+                
+                <p>
+                  Notre philosophie : des <span className="text-gold">ingrédients frais</span> 
+                  provenant directement des producteurs locaux, des <span className="text-gold">recettes authentiques</span> 
+                  transmises de génération en génération, et un <span className="text-gold">service attentionné</span> 
+                  qui vous fait vous sentir comme à la maison.
+                </p>
+                
+                <p>
+                  Chaque plat raconte une histoire, chaque saveur évoque une mémoire, 
+                  et chaque visite devient un <span className="text-orange font-semibold">moment inoubliable</span>.
+                </p>
+              </div>
+
+              {/* Stats À Propos */}
+              <div className="grid grid-cols-2 gap-6 mt-8">
+                {[
+                  { number: '21+', label: 'Plats Signature' },
+                  { number: '100%', label: 'Fait Maison' },
+                  { number: '⭐ 5/5', label: 'Satisfaction' },
+                  { number: '24/7', label: 'Service' }
+                ].map((stat, index) => (
+                  <div key={index} className="text-center p-4 bg-black/30 rounded-2xl border border-gold/10">
+                    <div className="text-2xl font-bold text-gold mb-1">{stat.number}</div>
+                    <div className="text-cream/70 text-sm">{stat.label}</div>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+          </div>
+        </div>
+      </section>
+
+      {/* Section Horaires & Contact */}
+      <section className="py-20 bg-dark relative">
+        <div className="container mx-auto px-4">
+          <div className="grid md:grid-cols-2 gap-12 max-w-6xl mx-auto">
+            {/* Horaires */}
+            <motion.div
+              initial={{ opacity: 0, y: 50 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8 }}
+              className="bg-gradient-to-br from-black to-dark border border-gold/20 rounded-3xl p-8 relative overflow-hidden"
+            >
+              <div className="absolute top-0 right-0 w-32 h-32 bg-gold/5 rounded-full -translate-y-16 translate-x-16"></div>
+              <h3 className="text-3xl font-poppins font-bold text-gold mb-8">Horaires d'Ouverture</h3>
+              
+              <div className="space-y-4">
+                {[
+                  { jour: 'Lundi', horaire: 'Fermé', statut: 'closed' },
+                  { jour: 'Mardi', horaire: '13h00 - 00h00', statut: 'open' },
+                  { jour: 'Mercredi', horaire: '13h00 - 00h00', statut: 'open' },
+                  { jour: 'Jeudi', horaire: '13h00 - 00h00', statut: 'open' },
+                  { jour: 'Vendredi', horaire: '13h00 - 00h00', statut: 'open' },
+                  { jour: 'Samedi', horaire: '13h00 - 00h00', statut: 'open' },
+                  { jour: 'Dimanche', horaire: '13h00 - 00h00', statut: 'open' }
+                ].map((horaire, index) => (
+                  <div key={index} className="flex justify-between items-center py-3 border-b border-gold/10 last:border-b-0">
+                    <span className={`font-semibold ${horaire.statut === 'closed' ? 'text-red-400' : 'text-cream'}`}>
+                      {horaire.jour}
+                    </span>
+                    <span className={horaire.statut === 'closed' ? 'text-red-400' : 'text-gold font-semibold'}>
+                      {horaire.horaire}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+
+            {/* Contact */}
+            <motion.div
+              initial={{ opacity: 0, y: 50 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.2 }}
+              className="bg-gradient-to-br from-black to-dark border border-gold/20 rounded-3xl p-8 relative overflow-hidden"
+            >
+              <div className="absolute bottom-0 left-0 w-32 h-32 bg-orange/5 rounded-full translate-y-16 -translate-x-16"></div>
+              <h3 className="text-3xl font-poppins font-bold text-gold mb-8">Nous Contacter</h3>
+              
+              <div className="space-y-6">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-gold/10 rounded-xl flex items-center justify-center">
+                    <span className="text-2xl">📍</span>
+                  </div>
+                  <div>
+                    <p className="text-cream font-semibold">Dekoungbé, Abomey-Calavi</p>
+                    <p className="text-cream/70 text-sm">À proximité du marché central</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-gold/10 rounded-xl flex items-center justify-center">
+                    <span className="text-2xl">📞</span>
+                  </div>
+                  <div>
+                    <p className="text-cream font-semibold">01 55 55 73 09</p>
+                    <p className="text-cream/70 text-sm">Service client</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-gold/10 rounded-xl flex items-center justify-center">
+                    <span className="text-2xl">📧</span>
+                  </div>
+                  <div>
+                    <p className="text-cream font-semibold">brinaregal02@gmail.com</p>
+                    <p className="text-cream/70 text-sm">Réponse sous 24h</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* CTA Contact */}
+              <div className="mt-8 p-4 bg-gold/10 rounded-2xl border border-gold/20">
+                <p className="text-cream text-center">
+                  <span className="text-gold font-semibold">Réservation recommandée</span> pour les soirs de week-end
+                </p>
+              </div>
+            </motion.div>
+          </div>
+        </div>
+      </section>
+
+      {/* Section Avis Clients */}
+      <section className="py-20 bg-gradient-to-br from-black to-dark relative overflow-hidden">
+        <div className="absolute inset-0 bg-[url('/images/pattern.svg')] opacity-5"></div>
+        <div className="container mx-auto px-4 relative z-10">
+          <motion.div
+            initial={{ opacity: 0, y: 50 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+            className="text-center mb-16"
+          >
+            <h2 className="text-5xl md:text-6xl font-poppins font-black mb-6">
+              <span className="bg-gradient-to-r from-gold via-orange to-gold bg-clip-text text-transparent">
+                Ils Parlent de Nous
+              </span>
+            </h2>
+            <p className="text-xl text-cream/80 max-w-2xl mx-auto">
+              Découvrez les expériences authentiques de nos clients satisfaits
+            </p>
+          </motion.div>
+
+          <motion.div
+            variants={staggerContainer}
+            initial="initial"
+            whileInView="animate"
+            viewport={{ once: true }}
+            className="grid md:grid-cols-2 lg:grid-cols-3 gap-6"
+          >
+            {reviews.map((review, index) => (
+              <motion.div
+                key={review.id}
+                variants={fadeInUp}
+                className="group bg-gradient-to-br from-black to-dark border border-gold/20 rounded-3xl p-6 hover:border-gold/40 transition-all duration-500 hover:shadow-2xl"
+              >
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="w-14 h-14 bg-gradient-to-br from-gold to-orange rounded-2xl flex items-center justify-center text-dark font-bold text-lg">
+                    {review.nom_client?.charAt(0) || 'C'}
+                  </div>
+                  <div>
+                    <h4 className="text-gold font-semibold text-lg">{review.nom_client || 'Client'}</h4>
+                    <div className="flex text-yellow-400 text-sm">
+                      {'★'.repeat(review.note)}{'☆'.repeat(5 - review.note)}
+                    </div>
+                  </div>
+                </div>
+                
+                <p className="text-cream/80 italic text-lg leading-relaxed">
+                  "{review.message}"
+                </p>
+                
+                <div className="mt-4 pt-4 border-t border-gold/10">
+                  <p className="text-cream/60 text-sm">
+                    Avis vérifié • {new Date().toLocaleDateString('fr-FR')}
+                  </p>
+                </div>
+              </motion.div>
+            ))}
+          </motion.div>
+
+          {/* CTA Final */}
+          <motion.div
+            initial={{ opacity: 0, y: 50 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.4 }}
+            className="text-center mt-16"
+          >
+            <div className="bg-gradient-to-r from-gold/10 to-orange/10 border border-gold/20 rounded-3xl p-8 max-w-4xl mx-auto">
+              <h3 className="text-3xl md:text-4xl font-poppins font-bold text-cream mb-4">
+                Prêt à vivre l'expérience <span className="text-gold">Brina'Régal</span> ?
+              </h3>
+              <p className="text-xl text-cream/80 mb-8">
+                Rejoignez nos nombreux clients satisfaits et découvrez pourquoi nous sommes 
+                le restaurant préféré d'Abomey-Calavi
+              </p>
+              <Link 
+                href="/menu"
+                className="inline-flex items-center gap-4 bg-gradient-to-r from-gold to-orange text-dark px-16 py-5 rounded-2xl text-xl font-bold hover:shadow-2xl transition-all duration-500 transform hover:scale-105 group"
+              >
+                Commander Maintenant
+                <span className="group-hover:translate-x-2 transition-transform duration-300">→</span>
+              </Link>
+            </div>
+          </motion.div>
+        </div>
+      </section>
+    </div>
+  )
+}
