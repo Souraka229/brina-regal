@@ -1,10 +1,19 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const [client, setClient] = useState(null)
+
+  // Charger les informations du client depuis le localStorage
+  useEffect(() => {
+    const clientData = localStorage.getItem('client')
+    if (clientData) {
+      setClient(JSON.parse(clientData))
+    }
+  }, [])
 
   return (
     <header className="bg-dark/90 backdrop-blur-md fixed w-full z-50 border-b border-gold/20">
@@ -20,7 +29,7 @@ export default function Header() {
           </Link>
 
           {/* Menu desktop */}
-          <div className="hidden md:flex items-center space-x-8">
+          <div className="hidden md:flex items-center space-x-6">
             <Link href="/" className="text-cream hover:text-gold transition-colors duration-300">
               Accueil
             </Link>
@@ -33,6 +42,31 @@ export default function Header() {
             >
               Commander
             </Link>
+
+            {/* CTA client */}
+            {client ? (
+              <Link 
+                href="/compte"
+                className="text-cream hover:text-gold transition-colors duration-300"
+              >
+                Mon Compte
+              </Link>
+            ) : (
+              <>
+                <Link 
+                  href="/connexion" 
+                  className="text-cream hover:text-gold transition-colors duration-300"
+                >
+                  Connexion
+                </Link>
+                <Link 
+                  href="/inscription"
+                  className="border border-gold text-gold px-4 py-2 rounded-full hover:bg-gold hover:text-dark transition-all duration-300"
+                >
+                  S'inscrire
+                </Link>
+              </>
+            )}
           </div>
 
           {/* Menu mobile */}
@@ -74,6 +108,34 @@ export default function Header() {
               >
                 Commander
               </Link>
+
+              {/* CTA mobile */}
+              {client ? (
+                <Link
+                  href="/compte"
+                  className="block text-cream hover:text-gold py-2 transition-colors"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  Mon Compte
+                </Link>
+              ) : (
+                <>
+                  <Link 
+                    href="/connexion" 
+                    className="block text-cream hover:text-gold py-2 transition-colors"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    Connexion
+                  </Link>
+                  <Link 
+                    href="/inscription"
+                    className="block border border-gold text-gold px-4 py-2 rounded-full hover:bg-gold hover:text-dark transition-all mt-2 text-center"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    S'inscrire
+                  </Link>
+                </>
+              )}
             </motion.div>
           )}
         </AnimatePresence>
