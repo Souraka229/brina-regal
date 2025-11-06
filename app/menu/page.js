@@ -1,8 +1,8 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { supabase } from '@/lib/supabaseClient'
-import { useCart } from '@/context/CartContext'
+import { supabase } from '../../lib/supabaseClient'
+import { useCart } from '../../context/CartContext'
 import Link from 'next/link'
 
 export default function Menu() {
@@ -53,7 +53,6 @@ export default function Menu() {
   return (
     <div className="min-h-screen bg-dark pt-20">
       <div className="container mx-auto px-4 py-8">
-        {/* En-tête avec compteur panier */}
         <div className="flex justify-between items-center mb-8">
           <motion.h1 
             initial={{ opacity: 0, y: 50 }}
@@ -76,7 +75,6 @@ export default function Menu() {
           </Link>
         </div>
 
-        {/* Filtres par catégorie */}
         <div className="flex flex-wrap gap-4 justify-center mb-12">
           {categories.map(category => (
             <motion.button
@@ -95,7 +93,6 @@ export default function Menu() {
           ))}
         </div>
 
-        {/* Liste des produits */}
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 mb-20">
           {filteredProducts.map((product, index) => (
             <motion.div
