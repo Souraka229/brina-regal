@@ -1,15 +1,13 @@
 'use client'
 import { useState } from 'react'
-import { useCart } from '@/context/CartContext'
+import { useCart } from '../../context/CartContext'
 import { motion } from 'framer-motion'
-import { supabase } from '@/lib/supabaseClient'
 import { useRouter } from 'next/navigation'
 
 export default function Panier() {
   const { items, updateQuantity, removeItem, getTotalPrice, clearCart } = useCart()
   const [lieu, setLieu] = useState('')
   const [telephone, setTelephone] = useState('')
-  const [imagePreuve, setImagePreuve] = useState(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const router = useRouter()
 
@@ -18,30 +16,18 @@ export default function Panier() {
     setIsSubmitting(true)
 
     try {
-      const commande = {
-        id_client: `client_${Date.now()}`,
-        produits: items,
+      // Simulation de commande
+      console.log('Commande:', {
+        items,
         total: getTotalPrice(),
         telephone,
-        lieu_livraison: lieu,
-        statut: 'en attente',
-        created_at: new Date().toISOString()
-      }
+        lieu
+      })
 
-      // Si hors zone, upload de l'image de preuve
-      if (lieu !== 'restaurant' && imagePreuve) {
-        // Ici vous implémenterez l'upload vers Supabase Storage
-        console.log('Upload image à implémenter')
-      }
-
-      const { data, error } = await supabase
-        .from('commandes')
-        .insert([commande])
-
-      if (error) throw error
-
+      // Ici vous intégrerez Supabase plus tard
+      alert('Commande passée avec succès! Nous vous contacterons bientôt.')
+      
       clearCart()
-      alert('Commande passée avec succès!')
       router.push('/')
     } catch (error) {
       console.error('Erreur:', error)
@@ -62,12 +48,12 @@ export default function Panier() {
           >
             Votre Panier
           </motion.h1>
-          <p className="text-cream/80 text-xl">Votre panier est vide</p>
+          <p className="text-cream/80 text-xl mb-6">Votre panier est vide</p>
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={() => router.push('/menu')}
-            className="mt-6 bg-gradient-to-r from-gold to-orange text-dark px-8 py-3 rounded-full font-semibold"
+            className="bg-gradient-to-r from-gold to-orange text-dark px-8 py-3 rounded-full font-semibold"
           >
             Voir le Menu
           </motion.button>
@@ -87,7 +73,7 @@ export default function Panier() {
           Finaliser la Commande
         </motion.h1>
 
-        <div className="grid lg:grid-cols-2 gap-8">
+        <div className="grid lg:grid-cols-2 gap-8 max-w-6xl mx-auto">
           {/* Récapitulatif commande */}
           <div className="bg-black border border-gold/20 rounded-2xl p-6">
             <h2 className="text-2xl font-semibold text-gold mb-6">Votre Commande</h2>
@@ -99,7 +85,7 @@ export default function Panier() {
                   animate={{ opacity: 1, x: 0 }}
                   className="flex justify-between items-center py-4 border-b border-gold/10"
                 >
-                  <div>
+                  <div className="flex-1">
                     <h3 className="text-gold font-semibold">{item.nom}</h3>
                     <p className="text-cream/70">{item.prix} XOF x {item.quantity}</p>
                   </div>
@@ -107,21 +93,21 @@ export default function Panier() {
                     <div className="flex items-center space-x-2">
                       <button
                         onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                        className="w-8 h-8 bg-gold text-dark rounded-full flex items-center justify-center"
+                        className="w-8 h-8 bg-gold text-dark rounded-full flex items-center justify-center hover:bg-orange transition-colors"
                       >
                         -
                       </button>
                       <span className="text-cream w-8 text-center">{item.quantity}</span>
                       <button
                         onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                        className="w-8 h-8 bg-gold text-dark rounded-full flex items-center justify-center"
+                        className="w-8 h-8 bg-gold text-dark rounded-full flex items-center justify-center hover:bg-orange transition-colors"
                       >
                         +
                       </button>
                     </div>
                     <button
                       onClick={() => removeItem(item.id)}
-                      className="text-red-500 hover:text-red-400"
+                      className="text-red-500 hover:text-red-400 p-2"
                     >
                       🗑️
                     </button>
@@ -139,7 +125,7 @@ export default function Panier() {
 
           {/* Formulaire de commande */}
           <form onSubmit={handleSubmit} className="bg-black border border-gold/20 rounded-2xl p-6">
-            <h2 className="text-2xl font-semibold text-gold mb-6">Informations de Livraison</h2>
+            <h2 className="text-2xl font-semibold text-gold mb-6">Informations</h2>
             
             <div className="space-y-6">
               <div>
@@ -154,7 +140,6 @@ export default function Panier() {
                   <option value="restaurant">Sur place au restaurant</option>
                   <option value="dekounge">Dekoungbé et environs</option>
                   <option value="abomey">Autres zones d'Abomey-Calavi</option>
-                  <option value="hors_zone">Hors zone (dépôt requis)</option>
                 </select>
               </div>
 
@@ -169,22 +154,6 @@ export default function Panier() {
                   required
                 />
               </div>
-
-              {lieu === 'hors_zone' && (
-                <div>
-                  <label className="block text-cream mb-2">Preuve de dépôt</label>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => setImagePreuve(e.target.files[0])}
-                    className="w-full bg-dark border border-gold/20 rounded-lg px-4 py-3 text-cream focus:outline-none focus:border-gold"
-                    required
-                  />
-                  <p className="text-cream/60 text-sm mt-2">
-                    Téléversez la capture de votre transfert mobile
-                  </p>
-                </div>
-              )}
 
               <motion.button
                 whileHover={{ scale: 1.02 }}
